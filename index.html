@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/><meta name="robots" content="noindex,nofollow"/><meta name="referrer" content="no-referrer"/>
+<title>Bedrock Verdict Review</title>
+<style>
+:root{--page:#f2f2f2;--card:#fcfcfc;--ink:#222;--mut:#555;--line:#ddd;--line2:#e8e8e8;--lnk:#6b6200;--red:#c62828;--amb:#a35f00;--grn:#2e7d32;--ind:#3949ab;--btn:#fff}
+@media (prefers-color-scheme: dark){:root{--page:#1b1e22;--card:#24282d;--ink:#e8e8e8;--mut:#b9c3cc;--line:#3a3f45;--line2:#30353b;--lnk:#f0e64a;--red:#ff7a7a;--amb:#f0b45a;--grn:#7bd389;--ind:#9fa8ff;--btn:#2c3137}}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--ink);font-family:-apple-system,'SF Pro Text',Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%}
+.wrap{max-width:600px;margin:0 auto;background:var(--card);min-height:100vh}
+.hdr{background:#000;padding:14px 16px;display:flex;align-items:center;gap:12px}.hdr img{width:62px;height:51px}
+.hdr h1{color:#fff;font-size:20px;line-height:24px;margin:0}.bar{height:4px;background:#ffff00}
+.pad{padding:12px 16px}.mut{color:var(--mut)}.sm{font-size:13px;line-height:18px}
+.sec{border-top:2px solid var(--ink);margin:16px 16px 0;padding-top:10px;font-size:18px;font-style:italic}
+.sec.g{border-top-color:var(--grn)}.sec.a{border-top-color:var(--amb)}
+.row{margin:0 16px;padding:10px 0;border-bottom:1px solid var(--line)}
+.t{font-size:17px;line-height:24px}.t a{color:var(--lnk);font-weight:bold}.t b{font-weight:bold}
+.l{font-size:15px;line-height:21px}
+.pill{display:inline-block;border-radius:10px;padding:0 8px;font-size:12px;line-height:20px;font-weight:bold;color:#fff;white-space:nowrap;margin-right:4px}
+.p-grn{background:#2e7d32}.p-amb{background:#a35f00}.p-red{background:#c62828}.p-redsolid{background:#c62828}.p-none{background:#777}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+button{font:inherit;font-size:15px;font-weight:bold;border-radius:18px;padding:8px 14px;border:2px solid;background:var(--btn);min-height:40px}
+.b-BID{color:var(--grn);border-color:var(--grn)}.b-PURSUIT{color:var(--amb);border-color:var(--amb)}.b-NOBID{color:var(--mut);border-color:var(--mut)}
+.b-LOWBID{color:var(--ind);border-color:var(--ind)}.b-CLOSEDLOST{color:var(--red);border-color:var(--red)}.b-go{background:#000;color:#ffff00;border-color:#000}
+.panel{margin-top:8px;padding:10px;border:2px solid var(--amb);border-radius:10px;background:var(--card)}
+.warn{color:var(--amb);font-weight:bold}.err{display:none;margin:12px 16px;padding:10px;border-radius:8px;background:#c62828;color:#fff;font-weight:bold}
+select,input{font:inherit;font-size:16px;padding:8px;border:1px solid var(--line);border-radius:8px;width:100%;background:var(--card);color:var(--ink)}
+.clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;max-width:90%;background:#222;color:#fff;padding:10px 14px;border-radius:10px;display:none;font-size:15px}
+#toast.bad{background:#c62828}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
+</head><body><div class="wrap">
+<div class="hdr"><img alt="ATI" src="logo.png"/><h1>BEDROCK &#8212; Pending Danny Verdict</h1></div><div class="bar"></div>
+<div id="err" class="err"></div>
+<div id="signin" class="pad" style="display:none">
+ <div class="t"><b>Sign in</b></div>
+ <p class="l mut">Danny only. A sign-in link (and code) is emailed to danny@aggregatetechnologies.com.</p>
+ <input id="em" type="email" value="danny@aggregatetechnologies.com" readonly="readonly"/>
+ <div class="btns"><button class="b-go" id="send">Email me a sign-in link</button></div>
+ <p class="l mut" style="margin-top:14px">Or type the 6-digit code from the email:</p>
+ <input id="code" inputmode="numeric" autocomplete="one-time-code" placeholder="123456"/>
+ <div class="btns"><button class="b-go" id="verify">Sign in with code</button></div>
+</div>
+<div id="board" style="display:none">
+ <div class="pad"><div class="l mut">All gated rows with no Danny Verdict set. Gate-recommended BIDs sort to the top with a green chip. A passed letting is a CHASE (PURSUIT), never an auto-close.</div>
+ <div class="l" style="margin-top:6px"><b id="count"></b></div>
+ <input id="filter" placeholder="Filter: title, state, county, owner, company, status" style="margin-top:8px"/>
+ <div class="btns"><button class="b-go" id="refresh">&#8635; Refresh</button><button class="b-NOBID" id="signout">Sign out</button></div></div>
+ <div class="sec g">Ready for your verdict</div><div id="ready"></div>
+ <div class="sec a">Awaiting gate &#8212; not ready for a verdict</div><div id="await"></div>
+ <div class="pad sm mut" id="who"></div>
+</div>
+<div id="toast"></div>
+</div>
+<script>
+// Shared board logic (access state per spec section 5, gate chip, urgency). Mirrored in build_verdict_digest.py.
+var RX = {
+  login: /login|sign-in|registration wall|interest (list|form)|\bNDA\b|walled|need Danny/i,
+  mailbox: /shared[- ]mailbox|mailbox token|graph token|token (cache|expired)/i,
+  inlineNote: /quote request|no plans (received|sent|exist)|scope in email|no bid documents|direct quote/i,
+  dodgeEmpty: /all empty|no documents|0 documents|plans \(0\)|0 plans|not_posted|nothing posted|document list empty/i,
+  noDocsClaim: /no (plans|documents|docs)|0 documents|nothing posted/i,
+  noDocsExist: /design-build|no plans exist|not advertised|not posted|not released|pre-design|SOQ stage|no construction plans|no SOW|earthwork phase|BD pursuit|no ITB yet/i,
+  request: /by request|upon request|request (plans|documents|docs|access)|contact .* for (plans|documents)/i,
+  live: /documents live on|on Dodge|portal|view link|plan room|download link|sharepoint/i
+};
+function refsOf(r){ try { return JSON.parse(r.refs_json || "{}") || {}; } catch(e){ return {}; } }
+function accessState(r){
+  var refs = refsOf(r), note = (r.fetch_note || "") + " " + (r.next_steps || ""), ok = r.fetch_outcome === "SUCCESS";
+  var inline = !!r.inline_scope || RX.inlineNote.test(note);
+  if (RX.login.test(note) && RX.mailbox.test(note)) return {s:"Shared-mailbox token", k:"red", pre:false, hint:"Run graph_attachment_download.py once interactively."};
+  if (r.fetch_outcome === "WALLED" || (RX.login.test(note) && !ok)) return {s:"Login required", k:"red", pre:false};
+  if (inline && !r.has_pdfs && !ok) return {s:"Scope in email, no plan set", k:"amb", pre:true, quote:true};
+  if (inline && r.has_pdfs) return {s:"Scope in email, ready to gate", k:"grn", pre:false};
+  if (r.dodge_number){
+    if (!ok && r.fetch_outcome && RX.dodgeEmpty.test(r.fetch_note || "")) return {s:"Checked Dodge " + (r.fetch_date || "") + ": nothing posted", k:"amb", pre:true};
+    if (RX.noDocsClaim.test(note) && !r.has_pdfs) return {s:"Not checked on Dodge yet", k:"amb", pre:false};
+  }
+  if (RX.noDocsExist.test(note)) return {s:"No docs exist yet", k:"amb", pre:true};
+  if (RX.request.test(note) || r.fetch_outcome === "SKIPPED") return {s:"Docs by request", k:"amb", pre:false};
+  if (r.fetch_outcome === "FAILED") return {s:"Fetch failed", k:"red", pre:false};
+  if (r.has_pdfs) return {s:"Docs linked, gate not run", k:"grn", pre:false};
+  var portal = Object.keys(refs).some(function(k){ return !/^intake_/.test(k) && /url|portal|planroom|sharepoint|procore|buildingconnected|smartbid|isqft|pipelinesuite|planetbids/i.test(k) && /^https?:/.test(String(refs[k])); });
+  var intake = Object.keys(refs).some(function(k){ return /^intake_/.test(k) && RX.live.test(String(refs[k])); });
+  if (r.dodge_number) return {s:"Not fetched yet - on Dodge", k:"amb", pre:false};
+  if (r.manifest_url || portal || intake) return {s:"Not fetched yet - on portal", k:"amb", pre:false};
+  if (r.plan_review_link) return {s:"Folder empty, not fetched yet", k:"amb", pre:false};
+  return {s:"Not fetched yet", k:"amb", pre:false};
+}
+function missingOf(r, a){
+  if (a.s === "Scope in email, no plan set") return "scope in email (no plan set)";
+  if (/nothing posted/.test(a.s)) return "nothing posted on Dodge (checked)";
+  if (a.s === "No docs exist yet") return "no docs exist yet (pre-procurement)";
+  if (!r.has_pdfs) return r.next_steps ? "no docs (not fetched yet)" : "no docs, no gate note";
+  return "gate flag not set";
+}
+function nextAction(a){
+  var m = {"Shared-mailbox token":"Run graph_attachment_download.py once interactively","Login required":"Sign in to the portal, then Retry on the desktop board",
+    "Scope in email, no plan set":"Quote from the email scope, or PURSUIT / CLOSED LOST","Scope in email, ready to gate":"Run the gate",
+    "No docs exist yet":"Pre-procurement: PURSUIT or CLOSED LOST","Docs by request":"Request the documents","Fetch failed":"Retry the doc fetch",
+    "Docs linked, gate not run":"Run the gate","Not checked on Dodge yet":"Check Dodge for documents"};
+  if (/nothing posted/.test(a.s)) return "Pre-procurement: PURSUIT or CLOSED LOST";
+  return m[a.s] || "Fetch the documents";
+}
+function gateChip(r){
+  var g = r.gate_recommendation; if (g) return g;
+  var all = (r.next_steps || "").match(/GATE VERDICT:\s*(NO[- ]?BID|BID-worthy|BID|PURSUIT)/ig); if (!all) return null;
+  var last = all[all.length-1].replace(/GATE VERDICT:\s*/i,"").toUpperCase();
+  return /^NO/.test(last) ? "NO-BID" : /^PURSUIT/.test(last) ? "PURSUIT" : "BID";
+}
+function urgency(r, today){
+  var d = r.letting_date || r.due_date; if (!d) return null;
+  var lab = r.letting_date ? "let" : "due";
+  var n = Math.round((Date.parse(d + "T12:00:00") - Date.parse(today + "T12:00:00")) / 86400000);
+  if (n < 0) return {t: lab + " " + (-n) + "d ago", k:"red"};
+  if (n === 0) return {t: (lab === "let" ? "lets" : "due") + " TODAY", k:"redsolid"};
+  if (n <= 3) return {t: "in " + n + "d", k:"amb"};
+  return {t: "in " + n + "d", k:"none", n:n};
+}
+
+var HOME=location.origin+location.pathname; var SELF="https://kpqyvejzgbparblfntza.supabase.co/functions/v1/verdict-board", DANNY="danny@aggregatetechnologies.com";
+var sb = supabase.createClient("https://kpqyvejzgbparblfntza.supabase.co","sb_publishable_nh7Br1vIWjXY8uPiLxgrmQ_zwqVKmr6",{auth:{persistSession:true,detectSessionInUrl:true,flowType:"implicit"}});
+var ROWS=[], OPEN=null, Q=new URLSearchParams(location.search), PRE={row:Q.get("row"), v:Q.get("v")};
+function $(i){return document.getElementById(i)}
+function E(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;")}
+function err(m){var e=$("err"); if(!m){e.style.display="none";return} e.textContent=m; e.style.display="block"; window.scrollTo(0,0)}
+function toast(m,bad){var t=$("toast"); t.textContent=m; t.className=bad?"bad":""; t.style.display="block"; clearTimeout(t._h); t._h=setTimeout(function(){t.style.display="none"},bad?7000:4000)}
+function today(){return new Date().toLocaleDateString("en-CA",{timeZone:"America/Chicago"})}
+function md(d){if(!d)return""; var p=d.split("-"); return p[1]+"/"+p[2]+"/"+p[0]}
+function money(v){if(v==null||v==="")return""; var n=Number(v); return isNaN(n)?"":"$"+n.toLocaleString("en-US",{maximumFractionDigits:0})}
+function linkLabel(u){if(!u)return""; if(/sharepoint/i.test(u))return"Plan folder"; if(/construction\.com/i.test(u))return"Dodge page"; if(/sam\.gov/i.test(u))return"SAM.gov"; if(/bidx/i.test(u))return"BidX"; if(/fdot/i.test(u))return"FDOT"; try{return new URL(u).host}catch(e){return"link"}}
+async function tok(){var s=(await sb.auth.getSession()).data.session; return s?s.access_token:null}
+async function api(path,opt){
+  var t=await tok(); if(!t){show(false); throw {code:"needs_reauth",message:"Sign in first."}}
+  opt=opt||{}; opt.headers=Object.assign({"authorization":"Bearer "+t,"content-type":"application/json"},opt.headers||{});
+  var r=await fetch(SELF+"?api="+path,opt), j=await r.json().catch(function(){return {error:{code:"server_unavailable",message:"Try Refresh in a moment."}}});
+  if(!r.ok||j.error){throw (j.error||{code:"tool_error",message:"HTTP "+r.status})}
+  return j;
+}
+function show(signed){$("signin").style.display=signed?"none":"block"; $("board").style.display=signed?"block":"none"}
+async function load(){
+  err(null);
+  try{ var j=await api("rows"); ROWS=j.rows||[]; $("who").textContent="Signed in as "+j.email+". Data is live from BEDROCK on every load and Refresh."; render(); preselect(); }
+  catch(e){ if(e.code==="not_danny"){ await sb.auth.signOut(); show(false) } err(e.message||String(e)) }
+}
+function matches(r,f){ if(!f)return true; f=f.toLowerCase(); return [r.project_title,r.state,r.county,r.owner,r.company_name,r.pipeline_status].join(" ").toLowerCase().indexOf(f)>=0 }
+function chip(t,k){return '<span class="pill p-'+k+'">'+E(t)+'</span>'}
+function head(r){
+  var t=r.plan_review_link&&/^https?:/i.test(r.plan_review_link)?'<a href="'+E(r.plan_review_link)+'">'+E(r.project_title||"(untitled)")+'</a>':'<b>'+E(r.project_title||"(untitled)")+'</b>';
+  return '<div class="t">'+t+' ('+E(r.state||"")+')<br/>'+'</div>';
+}
+function meta(r){
+  var u=urgency(r,today()), when=md(r.letting_date||r.due_date), g=gateChip(r), bits=[];
+  if(g) bits.push(chip(g==="BID"?"BID":g==="PURSUIT"?"PURSUIT":"NO-BID", g==="BID"?"grn":g==="PURSUIT"?"amb":"red"));
+  if(u&&u.k!=="none") bits.push(chip(u.t,u.k));
+  var st='<em>'+E(r.pipeline_status||"")+'</em>'; if((r.pipeline_status||"").toUpperCase()==="NO-BID") st=chip("NO-BID status","red");
+  return '<div class="l">'+bits.join("")+'#'+r.id+(money(r.total_bid_dollar)?" &#183; "+money(r.total_bid_dollar):"")+(when?" &#183; "+(r.letting_date?"Lets ":"Due ")+when:"")+'</div>'+
+    '<div class="l mut">'+E([r.county,r.owner||r.company_name].filter(Boolean).join(" &#183; ").replace(/&amp;#183;/g,"\u00b7"))+(r.contact_name?' &#183; <em>'+E(r.contact_name)+'</em>':'')+' &#183; '+st+'</div>';
+}
+function docs(r){
+  var o=[]; var p=r.plan_review_link||"";
+  if(/^https?:/i.test(p)) o.push('<a href="'+E(p)+'">'+E(linkLabel(p))+'</a>');
+  else if(/^[A-Za-z]:\\/.test(p)) o.push('<button class="b-NOBID" data-copy="'+E(p)+'">Copy local path</button>');
+  if(r.dodge_url&&r.dodge_url!==p) o.push('<a href="'+E(r.dodge_url)+'">Dodge page</a>');
+  return o.length?'<div class="l">'+o.join(" &#183; ")+'</div>':'';
+}
+function note(r){ var n=r.next_steps||""; if(!n) return ""; var long=n.length>160||n.split("\n").length>3;
+  return '<div class="l mut'+(long?' clamp':'')+'" id="n'+r.id+'">'+E(n)+'</div>'+(long?'<a href="#" class="sm" data-more="'+r.id+'">Show more</a>':'') }
+var VB=[["BID","&#10003; BID"],["PURSUIT","&#8635; PURSUIT / CHASE"],["NO BID","&#8856; NO-BID"],["LOW BID","&#8600; LOW BID"],["CLOSED LOST","&#10007; CLOSED LOST"]];
+function cls(v){return "b-"+v.replace(/ /g,"")}
+function buttons(r,allowed){ return '<div class="btns">'+VB.filter(function(b){return allowed.indexOf(b[0])>=0}).map(function(b){return '<button class="'+cls(b[0])+'" data-id="'+r.id+'" data-v="'+b[0]+'">'+b[1]+'</button>'}).join("")+'</div><div id="p'+r.id+'"></div>' }
+function render(){
+  var f=$("filter").value, t=today();
+  var ready=ROWS.filter(function(r){return r.gated&&matches(r,f)}), wait=ROWS.filter(function(r){return !r.gated&&matches(r,f)});
+  ready.sort(function(a,b){var ga=gateChip(a)==="BID"?0:1, gb=gateChip(b)==="BID"?0:1; if(ga!==gb)return ga-gb;
+    var da=a.letting_date||a.due_date||"9999", db=b.letting_date||b.due_date||"9999"; return da<db?-1:da>db?1:a.id-b.id});
+  $("count").textContent=ROWS.filter(function(r){return r.gated}).length+" ready for verdict \u00b7 "+ROWS.filter(function(r){return !r.gated}).length+" awaiting gate";
+  $("ready").innerHTML=ready.length?ready.map(function(r){return '<div class="row" id="r'+r.id+'">'+head(r)+meta(r)+docs(r)+note(r)+buttons(r,["BID","PURSUIT","NO BID","LOW BID","CLOSED LOST"])+'</div>'}).join(""):'<div class="row l mut"><em>Nothing gated and waiting. Rows land here after the gate runs.</em></div>';
+  $("await").innerHTML=wait.length?wait.map(function(r){var a=accessState(r);
+    return '<div class="row" id="r'+r.id+'">'+head(r)+meta(r)+'<div class="l">'+chip(a.s,a.k==="grn"?"grn":a.k==="red"?"red":"amb")+(r.fetch_date?'<span class="sm mut">fetched '+E(r.fetch_date)+'</span>':'')+'</div>'+
+      '<div class="l mut">Missing: '+E(missingOf(r,a))+' &#183; Next: <em>'+E(nextAction(a))+'</em></div>'+docs(r)+note(r)+
+      (a.pre?buttons(r,["PURSUIT","CLOSED LOST"])+'<div class="sm mut">'+(a.quote?"Quote request: price it from the email scope, or chase/close.":"Pre-procurement: BID / NO-BID wait for documents")+'</div>':'<div class="sm mut">Verdict: after gate</div>')+'</div>'}).join(""):'<div class="row l mut"><em>None.</em></div>';
+}
+function openPanel(id,v){
+  var r=ROWS.filter(function(x){return String(x.id)===String(id)})[0]; if(!r){err("Row #"+id+" is not on the board any more (verdict already set or status changed). Refresh."); return}
+  if(OPEN&&OPEN!==String(id)){var o=$("p"+OPEN); if(o)o.innerHTML=""}
+  OPEN=String(id); var p=$("p"+id); if(!p){err("Row #"+id+": "+v+" isn't offered for this row (BID / NO-BID wait for the gate)."); return}
+  var h='<div class="panel"><div class="l">Set <b>'+E(v)+'</b> on #'+r.id+' '+E(r.project_title||"")+'?</div>';
+  if(v==="CLOSED LOST"){ h+='<select id="why'+id+'" style="margin-top:8px"><option value="">Choose a reason</option><option>too late / letting passed</option><option>no ATI scope</option><option>too small</option><option>GC declined / lost to competitor</option><option>other</option></select>';
+    if(gateChip(r)==="BID") h+='<div class="l warn" style="margin-top:6px">The gate recommended BID-worthy on this row. Consider PURSUIT / CHASE instead - a passed letting is a chase, not a close.</div>' }
+  h+='<div class="btns"><button class="b-go" data-go="'+id+'" data-v="'+v+'">Confirm '+E(v)+'</button><button class="b-NOBID" data-cancel="'+id+'">Cancel</button></div></div>';
+  p.innerHTML=h; $("r"+id).scrollIntoView({behavior:"smooth",block:"center"});
+}
+async function commit(id,v,btn){
+  var why=null; if(v==="CLOSED LOST"){ var s=$("why"+id); why=s&&s.value; if(!why){err("CLOSED LOST needs a reason."); return} }
+  var all=document.querySelectorAll('#r'+id+' button'); for(var i=0;i<all.length;i++) all[i].disabled=true; err(null);
+  try{ await api("verdict",{method:"POST",body:JSON.stringify({id:Number(id),verdict:v,reason:why})});
+    ROWS=ROWS.filter(function(r){return String(r.id)!==String(id)}); OPEN=null; render();
+    toast("#"+id+" \u2192 "+v+(why?" ("+why+")":""));
+    if(v==="BID") setTimeout(function(){toast("BID set on #"+id+". Ask Claude to run the planholder sweep for this project before the letting.")},4200);
+    if(PRE.row){history.replaceState(null,"",HOME); PRE={}}
+  }catch(e){ for(var j=0;j<all.length;j++) all[j].disabled=false; err((e.code?e.code+": ":"")+(e.message||e)); toast(e.message||"Error",true) }
+}
+function preselect(){ if(!PRE.row||!PRE.v) return; var v=PRE.v.toUpperCase().replace(/-/g," "); if(VB.map(function(b){return b[0]}).indexOf(v)<0){err("Unknown verdict in link: "+PRE.v);return} openPanel(PRE.row,v); PRE.v=null }
+document.addEventListener("click",function(ev){
+  var b=ev.target.closest("[data-v],[data-go],[data-cancel],[data-more],[data-copy]"); if(!b) return;
+  if(b.dataset.more){ev.preventDefault(); var n=$("n"+b.dataset.more); var c=n.classList.toggle("clamp"); b.textContent=c?"Show more":"Show less"; return}
+  if(b.dataset.copy){ navigator.clipboard.writeText(b.dataset.copy).then(function(){toast("Path copied")},function(){toast("Copy failed: "+b.dataset.copy,true)}); return}
+  if(b.dataset.cancel){ $("p"+b.dataset.cancel).innerHTML=""; OPEN=null; return}
+  if(b.dataset.go){ commit(b.dataset.go,b.dataset.v,b); return}
+  if(b.dataset.id){ openPanel(b.dataset.id,b.dataset.v) }
+});
+$("filter").addEventListener("input",render); $("refresh").onclick=load;
+$("signout").onclick=async function(){await sb.auth.signOut(); show(false)};
+$("send").onclick=async function(){ err(null); var r=await sb.auth.signInWithOtp({email:DANNY,options:{emailRedirectTo:HOME+location.search,shouldCreateUser:true}});
+  if(r.error) err("Sign-in email failed: "+r.error.message); else toast("Check danny@ for the sign-in link / code.") };
+$("verify").onclick=async function(){ err(null); var c=$("code").value.trim(); var r=await sb.auth.verifyOtp({email:DANNY,token:c,type:"email"});
+  if(r.error) err("Code rejected: "+r.error.message); else {show(true); load()} };
+(async function(){ var h=new URLSearchParams(location.hash.slice(1)); if(h.get("error_description")) err("Sign-in link problem: "+h.get("error_description"));
+  var s=(await sb.auth.getSession()).data.session; if(s){ if((s.user.email||"").toLowerCase()!==DANNY){ await sb.auth.signOut(); show(false); err("This board is Danny-only."); return } show(true); load() } else show(false) })();
+</script>
+</body></html>
