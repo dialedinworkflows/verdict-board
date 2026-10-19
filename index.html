@@ -123,7 +123,7 @@ var HOME=location.origin+location.pathname; var SELF="https://kpqyvejzgbparblfnt
 var sb = supabase.createClient("https://kpqyvejzgbparblfntza.supabase.co","sb_publishable_nh7Br1vIWjXY8uPiLxgrmQ_zwqVKmr6",{auth:{persistSession:true,detectSessionInUrl:true,flowType:"implicit"}});
 var ROWS=[], OPEN=null, Q=new URLSearchParams(location.search), PRE={row:Q.get("row"), v:Q.get("v")};
 function $(i){return document.getElementById(i)}
-function E(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;")}
+function E(s){return String(s==null?"":s).replace(/&/g,"&").replace(/</g,"<").replace(/>/g,">").replace(/"/g,""").replace(/'/g,"&#39;")}
 function err(m){var e=$("err"); if(!m){e.style.display="none";return} e.textContent=m; e.style.display="block"; window.scrollTo(0,0)}
 function toast(m,bad){var t=$("toast"); t.textContent=m; t.className=bad?"bad":""; t.style.display="block"; clearTimeout(t._h); t._h=setTimeout(function(){t.style.display="none"},bad?7000:4000)}
 function today(){return new Date().toLocaleDateString("en-CA",{timeZone:"America/Chicago"})}
@@ -156,7 +156,7 @@ function meta(r){
   if(u&&u.k!=="none") bits.push(chip(u.t,u.k));
   var st='<em>'+E(r.pipeline_status||"")+'</em>'; if((r.pipeline_status||"").toUpperCase()==="NO-BID") st=chip("NO-BID status","red");
   return '<div class="l">'+bits.join("")+'#'+r.id+(money(r.total_bid_dollar)?" &#183; "+money(r.total_bid_dollar):"")+(when?" &#183; "+(r.letting_date?"Lets ":"Due ")+when:"")+'</div>'+
-    '<div class="l mut">'+E([r.county,r.owner||r.company_name].filter(Boolean).join(" &#183; ").replace(/&amp;#183;/g,"\u00b7"))+(r.contact_name?' &#183; <em>'+E(r.contact_name)+'</em>':'')+' &#183; '+st+'</div>';
+    '<div class="l mut">'+E([r.county,r.owner||r.company_name].filter(Boolean).join(" \u00b7 "))+(r.contact_name?' &#183; <em>'+E(r.contact_name)+'</em>':'')+' &#183; '+st+'</div>';
 }
 function docs(r){
   var o=[]; var p=r.plan_review_link||"";
