@@ -123,7 +123,7 @@ var HOME=location.origin+location.pathname; var SELF="https://kpqyvejzgbparblfnt
 var sb = supabase.createClient("https://kpqyvejzgbparblfntza.supabase.co","sb_publishable_nh7Br1vIWjXY8uPiLxgrmQ_zwqVKmr6",{auth:{persistSession:true,detectSessionInUrl:true,flowType:"implicit"}});
 var ROWS=[], OPEN=null, Q=new URLSearchParams(location.search), PRE={row:Q.get("row"), v:Q.get("v")};
 function $(i){return document.getElementById(i)}
-function E(s){return String(s==null?"":s).replace(/&/g,"&").replace(/</g,"<").replace(/>/g,">").replace(/"/g,""").replace(/'/g,"&#39;")}
+function E(s){return String(s==null?"":s).replace(/&/g,"\x26amp;").replace(/</g,"\x26lt;").replace(/>/g,"\x26gt;").replace(/"/g,"\x26quot;").replace(/'/g,"\x26#39;")}
 function err(m){var e=$("err"); if(!m){e.style.display="none";return} e.textContent=m; e.style.display="block"; window.scrollTo(0,0)}
 function toast(m,bad){var t=$("toast"); t.textContent=m; t.className=bad?"bad":""; t.style.display="block"; clearTimeout(t._h); t._h=setTimeout(function(){t.style.display="none"},bad?7000:4000)}
 function today(){return new Date().toLocaleDateString("en-CA",{timeZone:"America/Chicago"})}
@@ -155,15 +155,15 @@ function meta(r){
   if(g) bits.push(chip(g==="BID"?"BID":g==="PURSUIT"?"PURSUIT":"NO-BID", g==="BID"?"grn":g==="PURSUIT"?"amb":"red"));
   if(u&&u.k!=="none") bits.push(chip(u.t,u.k));
   var st='<em>'+E(r.pipeline_status||"")+'</em>'; if((r.pipeline_status||"").toUpperCase()==="NO-BID") st=chip("NO-BID status","red");
-  return '<div class="l">'+bits.join("")+'#'+r.id+(money(r.total_bid_dollar)?" &#183; "+money(r.total_bid_dollar):"")+(when?" &#183; "+(r.letting_date?"Lets ":"Due ")+when:"")+'</div>'+
-    '<div class="l mut">'+E([r.county,r.owner||r.company_name].filter(Boolean).join(" \u00b7 "))+(r.contact_name?' &#183; <em>'+E(r.contact_name)+'</em>':'')+' &#183; '+st+'</div>';
+  return '<div class="l">'+bits.join("")+'#'+r.id+(money(r.total_bid_dollar)?" \u00b7 "+money(r.total_bid_dollar):"")+(when?" \u00b7 "+(r.letting_date?"Lets ":"Due ")+when:"")+'</div>'+
+    '<div class="l mut">'+E([r.county,r.owner||r.company_name].filter(Boolean).join(" \u00b7 "))+(r.contact_name?' \u00b7 <em>'+E(r.contact_name)+'</em>':'')+' \u00b7 '+st+'</div>';
 }
 function docs(r){
   var o=[]; var p=r.plan_review_link||"";
   if(/^https?:/i.test(p)) o.push('<a href="'+E(p)+'">'+E(linkLabel(p))+'</a>');
   else if(/^[A-Za-z]:\\/.test(p)) o.push('<button class="b-NOBID" data-copy="'+E(p)+'">Copy local path</button>');
   if(r.dodge_url&&r.dodge_url!==p) o.push('<a href="'+E(r.dodge_url)+'">Dodge page</a>');
-  return o.length?'<div class="l">'+o.join(" &#183; ")+'</div>':'';
+  return o.length?'<div class="l">'+o.join(" \u00b7 ")+'</div>':'';
 }
 function note(r){ var n=r.next_steps||""; if(!n) return ""; var long=n.length>160||n.split("\n").length>3;
   return '<div class="l mut'+(long?' clamp':'')+'" id="n'+r.id+'">'+E(n)+'</div>'+(long?'<a href="#" class="sm" data-more="'+r.id+'">Show more</a>':'') }
@@ -179,7 +179,7 @@ function render(){
   $("ready").innerHTML=ready.length?ready.map(function(r){return '<div class="row" id="r'+r.id+'">'+head(r)+meta(r)+docs(r)+note(r)+buttons(r,["BID","PURSUIT","NO BID","LOW BID","CLOSED LOST"])+'</div>'}).join(""):'<div class="row l mut"><em>Nothing gated and waiting. Rows land here after the gate runs.</em></div>';
   $("await").innerHTML=wait.length?wait.map(function(r){var a=accessState(r);
     return '<div class="row" id="r'+r.id+'">'+head(r)+meta(r)+'<div class="l">'+chip(a.s,a.k==="grn"?"grn":a.k==="red"?"red":"amb")+(r.fetch_date?'<span class="sm mut">fetched '+E(r.fetch_date)+'</span>':'')+'</div>'+
-      '<div class="l mut">Missing: '+E(missingOf(r,a))+' &#183; Next: <em>'+E(nextAction(a))+'</em></div>'+docs(r)+note(r)+
+      '<div class="l mut">Missing: '+E(missingOf(r,a))+' \u00b7 Next: <em>'+E(nextAction(a))+'</em></div>'+docs(r)+note(r)+
       (a.pre?buttons(r,["PURSUIT","CLOSED LOST"])+'<div class="sm mut">'+(a.quote?"Quote request: price it from the email scope, or chase/close.":"Pre-procurement: BID / NO-BID wait for documents")+'</div>':'<div class="sm mut">Verdict: after gate</div>')+'</div>'}).join(""):'<div class="row l mut"><em>None.</em></div>';
 }
 function openPanel(id,v){
